@@ -1,8 +1,31 @@
 const express = require("express")
 const { body, validationResult } = require("express-validator");
+const moment = require("moment"); // date validation
 
 const router = express.Router()
 router.use(express.json())
+
+const filterTasks = (tasks, completed) => {
+
+    if (completed) {
+        const completedBool = completed === "true";
+        console.log("Filtering operation applied....");
+        return tasks.filter(task => task.completed === completedBool);
+    }
+    return tasks;
+};
+
+const sortTasks = (tasks, sortBy) => {
+
+    if (sortBy) { //check if query param is to sortby date
+        console.log("Sorting operation applied....")
+        tasks.sort((a, b) => {
+            return moment(a.date, "YYYY-MM-DD").toDate() - moment(b.date, "YYYY-MM-DD").toDate();
+        })
+    }
+    return tasks;
+};
+
 
 // GET all tasks
 const getAllTaskHandler = (req,res) => {
@@ -18,29 +41,8 @@ const getAllTaskHandler = (req,res) => {
     // Operations for query params
     const { completed, sortBy } = req.query;
     console.log("query params=", req.query)
-
-    if(completed){  // check if query param is to filter task
-        const completedBool = completed == 'true' ? true : false
-        console.log("Filtering operation applied....")
-        let taskFiltered = []
-
-        tasks.filter((element) => {
-            if (element.completed == completedBool)
-                taskFiltered.push(element)
-        })
-        fetchTask = taskFiltered
-    }
-
-    if (sortBy) { //check if query param is to sortby date
-        console.log("Sorting operation applied....")
-        fetchTask.sort((a,b) => {
-            const dateA = new Date(a.date)
-            const dateB = new Date(b.date)
-            return dateA - dateB
-        })
-        console.log(fetchTask)
-    }
-
+    fetchTask = filterTasks(fetchTask,completed)
+    fetchTask = sortTasks(fetchTask, sortBy)
     return res.status(200).send(fetchTask);
 }
 
@@ -108,14 +110,10 @@ const getParticularPriorityTaskHandler =  (req, res)=>{
 
 //Create new task
 const createNewTaskHandler = (req,res) =>{
+    
+    console.log(`POST request to add new task`)
 
-    console.log(`POST request to create new task`)
-    const errors = validationResult(req)
-    if (!errors.isEmpty())
-        return res.status(400).json({errors: errors.array()})
-    
     const newTask = req.body
-    
     newTask.id = tasks.length + 1
     tasks.push(newTask)
     console.log(newTask)
@@ -126,9 +124,6 @@ const createNewTaskHandler = (req,res) =>{
 const updateTaskHandler = (req, res)=>{
 
     console.log(`PUT request to update task by id: ${req.params.id}`)
-    const errors = validationResult(req)
-    if (!errors.isEmpty())
-        return res.status(400).json({ errors: errors.array() })
 
     const id = req.params.id;
     const task = tasks.find((task) => task.id === parseInt(id))
@@ -161,31 +156,35 @@ const deleteTaskHandler = (req, res)=>{
     res.send(task)
 }
 
+// Validation Middleware
+const validateTask = [
+    body("title").isString().isLength({ min: 3, max: 100 }).withMessage("Title must be between 3 and 100 characters"),
+    body("description").optional().isString().isLength({ max: 100 }).withMessage("Description can't exceed 100 characters"),
+    body("completed").optional().isBoolean().withMessage("Completed must be a boolean"),
+    body("date").custom((value) => {
+            if (!moment(value, "YYYY-MM-DD", true).isValid()) {
+                throw new Error("Date must be in YYYY-MM-DD format");
+            }
+            return true;
+        }),
+    body("level").optional().isIn(["high", "medium", "low"]).withMessage('Priority must be either "high", "medium", or "low"'),
+
+    // Middleware to check validation errors
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next(); // Continue to next middleware or route handler
+    }
+];
 
 //CRUD Operations
 router.get("/", getAllTaskHandler)
 router.get("/:id", getParticularTaskHandler)
 router.get("/priority/:level", getParticularPriorityTaskHandler)
-
-router.post("/", 
-    //Validator
-    [
-        body("title").isString().isLength({ min: 3, max: 100 }).withMessage("Title must be between 3 and 100 characters"),
-        body("description").optional().isString().isLength({ max: 100 }).withMessage("Description can't exceed 100 characters"),
-        body("completed").optional().isBoolean().withMessage("Completed must be a boolean") 
-    ], 
-    //callback 
-    createNewTaskHandler)
-
-router.put("/:id", 
-    [
-        body("title").isString().isLength({ min: 3, max: 100 }).withMessage("Title must be between 3 and 100 characters"),
-        body("description").optional().isString().isLength({ max: 100 }).withMessage("Description can't exceed 100 characters"),
-        body("completed").optional().isBoolean().withMessage("Completed must be a boolean")        
-    ],
-    //callback
-    updateTaskHandler)
-
+router.post("/", validateTask, createNewTaskHandler)               // Apply validation middleware
+router.put("/:id", validateTask, updateTaskHandler)                // Apply validation middleware
 router.delete("/:id", deleteTaskHandler)
 
 
@@ -196,7 +195,7 @@ const tasks = [
         "title": "Set up environment",
         "description": "Install Node.js, npm, and git",
         "completed": true,
-        "date": "3",
+        "date": "11-02-2020",
         "level": "high"
     },
     {
@@ -204,7 +203,7 @@ const tasks = [
         "title": "Create a new project",
         "description": "Create a new project using the Express application generator",
         "completed": true,
-        "date": "1",
+        "date": "02-02-2020",
         "level": "medium"
     },
     {
@@ -212,7 +211,7 @@ const tasks = [
         "title": "Install nodemon",
         "description": "Install nodemon as a development dependency",
         "completed": true,
-        "date": "2",
+        "date": "16-02-2020",
         "level": "low"
     },
     {
@@ -220,7 +219,7 @@ const tasks = [
         "title": "Install Express",
         "description": "Install Express",
         "completed": false,
-        "date": "5",
+        "date": "12-02-2020",
         "level": "high"
     },
     {
@@ -228,7 +227,7 @@ const tasks = [
         "title": "Install Mongoose",
         "description": "Install Mongoose",
         "completed": false,
-        "date": "4",
+        "date": "22-02-2020",
         "level": "medium"
     },
     {
@@ -236,7 +235,7 @@ const tasks = [
         "title": "Install Morgan",
         "description": "Install Morgan",
         "completed": false,
-        "date": "6",
+        "date": "24-02-2020",
         "level": "low"
     },
     {
@@ -244,7 +243,7 @@ const tasks = [
         "title": "Install body-parser",
         "description": "Install body-parser",
         "completed": false,
-        "date": "7",
+        "date": "18-02-2020",
         "level": "high"
     },
     {
@@ -252,7 +251,7 @@ const tasks = [
         "title": "Install cors",
         "description": "Install cors",
         "completed": false,
-        "date": "9",
+        "date": "20-02-2020",
         "level": "medium"
     },
     {
@@ -260,7 +259,7 @@ const tasks = [
         "title": "Install passport",
         "description": "Install passport",
         "completed": false,
-        "date": "8",
+        "date": "19-02-2020",
         "level": "low"
     },
     {
@@ -268,7 +267,7 @@ const tasks = [
         "title": "Install passport-local",
         "description": "Install passport-local",
         "completed": false,
-        "date": "1",
+        "date": "07-02-2020",
         "level": "high"
     },
     {
@@ -276,7 +275,7 @@ const tasks = [
         "title": "Install passport-local-mongoose",
         "description": "Install passport-local-mongoose",
         "completed": false,
-        "date": "14",
+        "date": "16-02-2020",
         "level": "medium"
     },
     {
@@ -284,7 +283,7 @@ const tasks = [
         "title": "Install express-session",
         "description": "Install express-session",
         "completed": false,
-        "date": "11",
+        "date": "01-02-2020",
         "level": "low"
     },
     {
@@ -292,7 +291,7 @@ const tasks = [
         "title": "Install connect-mongo",
         "description": "Install connect-mongo",
         "completed": false,
-        "date": "12",
+        "date": "18-02-2020",
         "level": "high"
     },
     {
@@ -300,7 +299,7 @@ const tasks = [
         "title": "Install dotenv",
         "description": "Install dotenv",
         "completed": false,
-        "date": "10",
+        "date": "28-02-2020",
         "level": "medium"
     },
     {
@@ -308,7 +307,7 @@ const tasks = [
         "title": "Install jsonwebtoken",
         "description": "Install jsonwebtoken",
         "completed": false,
-        "date": "13",
+        "date": "02-02-2020",
         "level": "low"
     }
 ]
