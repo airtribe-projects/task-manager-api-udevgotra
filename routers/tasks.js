@@ -48,8 +48,13 @@ const getAllTaskHandler = (req,res) => {
 
 // GET request particular task
 const getParticularTaskHandler = (req, res)=>{
-
+    
     console.log(`GET request for task id:${req.params.id}`)
+    const errors = validationResult(req)
+
+    if (!errors.isEmpty())
+        return res.status(400).json({ errors: errors.array() })
+
     const id = req.params.id;
     const task = tasks.find((task) => task.id === parseInt(id))
     if (!task)
@@ -72,39 +77,21 @@ const getParticularPriorityTaskHandler =  (req, res)=>{
     let priorityTasks=[]
 
     tasks.forEach((task) => {
-        if (task.level == priority){
+        if (task.level == priority) {
             priorityTasks.push(task)
         }
     })
-    if(priorityTasks.length == 0)
+
+    if (priorityTasks.length == 0)
         res.status(404).send("No task with requested prioroty")
-    
+
     // Operations for query params
     const { completed, sortBy } = req.query;
     console.log("query params=", req.query)
 
-    if (completed) {  // check if query param is to filter task
-        const completedBool = completed == 'true' ? true : false
-        console.log("Filtering operation applied....")
-        let taskFiltered = []
-
-        priorityTasks.filter((element) => {
-            if (element.completed == completedBool)
-                taskFiltered.push(element)
-        })
-        priorityTasks = taskFiltered
-    }
-
-    if (sortBy) { //check if query param is to sortby date
-        console.log("Sorting operation applied....")
-        priorityTasks.sort((a, b) => {
-            const dateA = new Date(a.date)
-            const dateB = new Date(b.date)
-            return dateA - dateB
-        })
-        console.log(priorityTasks)
-    }
-
+    priorityTasks = filterTasks(priorityTasks, completed)
+    priorityTasks = sortTasks(priorityTasks, sortBy)
+    
     res.status(200).send(priorityTasks)
 }
 
@@ -112,6 +99,11 @@ const getParticularPriorityTaskHandler =  (req, res)=>{
 const createNewTaskHandler = (req,res) =>{
     
     console.log(`POST request to add new task`)
+
+    const errors = validationResult(req)
+
+    if (!errors.isEmpty())
+        return res.status(400).json({ errors: errors.array() })
 
     const newTask = req.body
     newTask.id = tasks.length + 1
@@ -124,6 +116,11 @@ const createNewTaskHandler = (req,res) =>{
 const updateTaskHandler = (req, res)=>{
 
     console.log(`PUT request to update task by id: ${req.params.id}`)
+
+    const errors = validationResult(req)
+
+    if (!errors.isEmpty())
+        return res.status(400).json({ errors: errors.array() })
 
     const id = req.params.id;
     const task = tasks.find((task) => task.id === parseInt(id))
@@ -143,7 +140,13 @@ const updateTaskHandler = (req, res)=>{
 
 //Delete an existing task
 const deleteTaskHandler = (req, res)=>{
+    
     console.log(`DELETE request for task id: ${req.params.id}`)
+
+    const errors = validationResult(req)
+
+    if (!errors.isEmpty())
+        return res.status(400).json({ errors: errors.array() })
 
     const id = req.params.id;
     const task = tasks.find((task) => task.id === parseInt(req.params.id))
