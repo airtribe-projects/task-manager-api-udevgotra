@@ -6,27 +6,21 @@ This project performs CRUD operations on In-memory datastores. This datastore is
 
 1. Set up environment
        
-      a. Install Node.js,npm,git
-
-
-      b. Command:
+      a. Install Node.js
+            nvm install node
+            node -v
+            nvm ls
+            nvm use ${version}
    
-         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-         nvm install node
-         node -v
-         nvm ls
-         nvm use ${version}
-   
-3. Create a new project
+      b. Create a new project
 
-
-       npm init
-       npm install express
-       npm install nodemon
+            npm init
+            npm install express
+            npm install nodemon
        
        
    
-4. End-Point APIs designed are as follows:
+2. End-Point APIs designed are as follows:
 
    a.  `getAllTaskHandler()`
 
@@ -84,8 +78,7 @@ This project performs CRUD operations on In-memory datastores. This datastore is
 
 
 
-
-4. Validation Middleware
+3. Validation Middleware
 
       const validateTask = [....]
 
@@ -93,7 +86,7 @@ This project performs CRUD operations on In-memory datastores. This datastore is
       We create a validation middleware that validates the data entry by user with certains restrictions.
 
 
-5. Helper functions
+4. Helper functions
 
       There are two helper functions that helps in perform operations according to the `query.params` provided by the client. These functions are created to maintain the saperation of concerns        with the router request
 
